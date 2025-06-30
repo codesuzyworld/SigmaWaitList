@@ -3,6 +3,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { MatrixBackground } from "../../components/MatrixBackground";
 import { WaitlistForm } from "../../components/WaitlistForm";
+import { ChatBox } from "../../components/ChatBox";
 import { Volume2, VolumeX, Github, Linkedin } from "lucide-react";
 import { trackVideoInteraction, trackSectionView, initializeAnalytics, trackEvent } from "../../lib/analytics";
 import { useApp } from "../../contexts/AppContext";
@@ -522,6 +523,8 @@ export const Desktop = (): JSX.Element => {
           </section>
         </main>
 
+        {/* Sigma AI Chatbox */}
+        <ChatBox />
       </div>
     </div>
   );

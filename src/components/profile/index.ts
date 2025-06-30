@@ -1,1 +1,7 @@
 export { ProfileSetup } from './ProfileSetup'
+export { ProfileSettings } from './ProfileSettings'
+export { ProfileDashboard } from './ProfileDashboard'
+export { PersonalProfileTab } from './tabs/PersonalProfileTab'
+export { BusinessProfileTab } from './tabs/BusinessProfileTab'
+export { LegalComplianceTab } from './tabs/LegalComplianceTab'
+export { AccountSettingsTab } from './tabs/AccountSettingsTab'

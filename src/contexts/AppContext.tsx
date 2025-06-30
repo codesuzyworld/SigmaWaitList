@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { OptimizedAuthService } from '../lib/api/optimizedAuthService'
+import { OptimizedProfileService } from '../lib/api/optimizedProfileService'
 import { AppMode, ModuleProgress } from '../types/app'
 
 interface AppContextType {
@@ -40,37 +41,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true)
   const [moduleProgress, setModuleProgress] = useState<ModuleProgress>({})
 
-  // Initialize auth state
+  // Initialize auth state with optimized service
   useEffect(() => {
     let mounted = true
     
-    // Add a timeout fallback in case auth hangs
+    // Add a timeout fallback
     const timeoutId = setTimeout(() => {
       if (mounted) {
         console.log('Auth initialization timeout, proceeding without auth')
         setLoading(false)
       }
-    }, 5000) // 5 second timeout
+    }, 5000)
     
-    // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
+    // Get initial session using optimized service
+    OptimizedAuthService.getCurrentSession()
+      .then((session) => {
         if (!mounted) return
         
         clearTimeout(timeoutId)
         
-        if (error) {
-          console.error('Auth session error:', error)
-          setUser(null)
-          setLoading(false)
-          return
-        }
-        
         setUser(session?.user ?? null)
         if (session?.user) {
           loadUserProfile(session.user.id)
+        } else {
+          setLoading(false)
         }
-        setLoading(false)
       })
       .catch((error) => {
         if (!mounted) return
@@ -81,20 +76,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoading(false)
       })
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Listen for auth changes using optimized service
+    const unsubscribe = OptimizedAuthService.onAuthStateChange(
+      async (user) => {
         if (!mounted) return
         
         try {
-          setUser(session?.user ?? null)
-          if (session?.user) {
-            await loadUserProfile(session.user.id)
+          setUser(user)
+          if (user) {
+            await loadUserProfile(user.id)
           } else {
             setUserProfile(null)
             setAppMode({ isAppMode: false, hasAccess: false })
+            setLoading(false)
           }
-          setLoading(false)
         } catch (error) {
           console.error('Auth state change error:', error)
           setLoading(false)
@@ -105,34 +100,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       mounted = false
       clearTimeout(timeoutId)
-      subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle() // Use maybeSingle to avoid errors when no rows found
-
-      if (error) {
-        if (error.code !== 'PGRST116') {
-          console.error('Error loading user profile:', error)
-        } else {
-          console.log('User profile not found, will create on first app access')
-        }
-        return
-      }
-
-      setUserProfile(data)
+      const profile = await OptimizedProfileService.getCompleteProfile(userId)
+      
+      setUserProfile(profile)
       setAppMode({ 
         isAppMode: false, // Start with waitlist view
         hasAccess: true // User has access if they're authenticated
       })
+      setLoading(false)
     } catch (error) {
       console.error('Error loading user profile:', error)
+      setLoading(false)
     }
   }
 
@@ -148,18 +132,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+    const result = await OptimizedAuthService.signIn(email, password)
+    return { error: result.error }
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error }
+    const result = await OptimizedAuthService.signUp(email, password)
+    return { error: result.error }
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setAppMode({ isAppMode: false, hasAccess: false })
+    try {
+      await OptimizedAuthService.signOut()
+      
+      // Reset all state
+      setUser(null)
+      setUserProfile(null)
+      setAppMode({ isAppMode: false, hasAccess: false })
+      setModuleProgress({})
+      
+      // Redirect to landing page
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Force redirect even if signOut fails
+      window.location.href = '/'
+    }
   }
 
   const value = {

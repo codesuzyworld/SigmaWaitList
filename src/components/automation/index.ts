@@ -1,0 +1,7 @@
+export { AutomationDashboard } from './AutomationDashboard'
+export { LegalModule } from './LegalModule'
+export { BrandingModule } from './BrandingModule'
+export { WebsiteModule } from './WebsiteModule'
+export { PaymentModule } from './PaymentModule'
+export { MarketingModule } from './MarketingModule'
+export { BankingModule } from './BankingModule'

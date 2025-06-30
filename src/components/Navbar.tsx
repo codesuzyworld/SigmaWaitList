@@ -187,7 +187,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
                     <button
                       onClick={() => {
                         if (appMode.isAppMode) {
-                          // In app mode, this could trigger a profile modal or navigate to profile view
+                          // Navigate to profile settings
+                          if (onNavigate) {
+                            onNavigate('profile-settings')
+                          }
                           setShowUserMenu(false)
                         } else {
                           handleEnterApp()
